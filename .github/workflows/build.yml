@@ -63,6 +63,13 @@ jobs:
           cp -r "$HOME/device_tree/." "$HOME/twrp/device/samsung/r8q/"
           ls -la "$HOME/twrp/device/samsung/r8q"
 
+      - name: Apply AMOLED theme
+        run: |
+          ls "$HOME/twrp/bootable/recovery/gui/theme"
+          python3 "$HOME/device_tree/tools/amoled_theme.py" \
+            "$HOME/twrp/bootable/recovery/gui/theme/common" \
+            "$HOME/twrp/bootable/recovery/gui/theme/portrait_hdpi"
+
       - name: Build recovery
         run: |
           cd "$HOME/twrp"
