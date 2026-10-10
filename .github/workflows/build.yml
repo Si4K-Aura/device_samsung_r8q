@@ -28,6 +28,15 @@ jobs:
             xsltproc unzip fontconfig python3 python-is-python3 rsync bc lz4 \
             liblz4-tool libssl-dev ccache
 
+      - name: Restore ccache
+        uses: actions/cache/restore@v5
+        continue-on-error: true
+        with:
+          path: ~/.ccache
+          key: ccache-r8q-${{ github.run_id }}
+          restore-keys: |
+            ccache-r8q-
+
       - name: Install repo tool
         run: |
           mkdir -p "$HOME/bin"
@@ -59,18 +68,35 @@ jobs:
           cd "$HOME/twrp"
           export ALLOW_MISSING_DEPENDENCIES=true
           export LC_ALL=C
+          export USE_CCACHE=1
+          export CCACHE_EXEC=/usr/bin/ccache
+          export CCACHE_DIR="$HOME/.ccache"
+          export CCACHE_COMPILERCHECK=content
+          ccache -M 5G
+          ccache -z
           set +e
           source build/envsetup.sh
           lunch twrp_r8q-eng
           mka recoveryimage
           set -e
+          ccache -s
           ls -lh out/target/product/r8q/
           test -f out/target/product/r8q/recovery.img
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          path: ~/.ccache
+          key: ccache-r8q-${{ github.run_id }}
 
       - name: Package for Odin
         run: |
           cp "$HOME/twrp/out/target/product/r8q/recovery.img" recovery.img
-          echo -n "SEANDROIDENFORCE" >> recovery.img
+          SIZE=$(stat -c %s recovery.img)
+          echo "image size: $SIZE bytes (partition limit: 82694144)"
+          test "$SIZE" -le 82694144
           tar -H ustar -c recovery.img > recovery.tar
           ls -l recovery.img recovery.tar
 
